@@ -31,16 +31,37 @@ async function modifySketchTemplate(filename) {
   const promises = [];
 
   zip.folder("pages").forEach(async (relativePath, file) => {
+    const { layers, textStyles } = renderDocument();
+
+    promises.push(
+      new Promise(async (resolve, reject) => {
+        const contents = await zip.file("document.json").async("string");
+        const document = JSON.parse(contents);
+
+        document.layerTextStyles.objects = textStyles;
+
+        zip.file("document.json", JSON.stringify(document));
+        resolve();
+      })
+    );
+
     promises.push(
       new Promise(async (resolve, reject) => {
         const contents = await file.async("string");
         const page = JSON.parse(contents);
 
-        const layer = renderDocument();
+        layers.forEach(layer => {
+          page.layers.push(layer);
+        });
 
-        console.log(layer);
+        // if (references) {
+        //   references.forEach(image => {
+        //     const { id, data } = image;
+        //     console.log("adding image", id + ".png");
 
-        page.layers.push(layer);
+        //     zip.folder("images").file(id + ".png", new Buffer(data, "base64"));
+        //   });
+        // }
 
         zip.file(file.name, JSON.stringify(page));
         resolve();
